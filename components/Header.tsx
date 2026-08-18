@@ -70,7 +70,7 @@ export function Header({
       <div className="flex items-center gap-3 sm:gap-4">
         <div
           onClick={onGoToDashboard}
-          className="flex items-center gap-3 cursor-pointer group select-none transition-transform active:scale-[0.99]"
+          className="flex items-center gap-3 sm:gap-3.5 cursor-pointer group select-none transition-transform active:scale-[0.99]"
           title="Click to go to Main Dashboard"
           role="button"
           tabIndex={0}
@@ -81,11 +81,13 @@ export function Header({
             }
           }}
         >
-          <AppLogo size={34} className="w-8 h-8 group-hover:scale-105 transition-transform" />
-          <div className="flex flex-col">
+          <div className="flex items-center justify-center shrink-0">
+            <AppLogo size={36} className="w-9 h-9 group-hover:scale-105 transition-transform" />
+          </div>
+          <div className="flex flex-col justify-center">
             <div className="flex items-center gap-2">
               <h1
-                className={`text-lg sm:text-xl font-bold tracking-tight transition-colors flex items-center gap-1.5 ${
+                className={`text-lg sm:text-xl font-bold tracking-tight leading-tight transition-colors flex items-center gap-1.5 ${
                   isDark
                     ? 'text-white group-hover:text-indigo-400'
                     : 'text-zinc-900 group-hover:text-indigo-600'
@@ -94,13 +96,13 @@ export function Header({
                 <span>Rafsan&apos;s Study Deck</span>
               </h1>
               {isDashboard && (
-                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-medium">
+                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-medium leading-none">
                   Dashboard
                 </span>
               )}
             </div>
             <p
-              className={`text-xs font-medium hidden sm:block transition-colors ${
+              className={`text-xs font-medium hidden sm:block transition-colors leading-tight mt-0.5 ${
                 isDark
                   ? 'text-zinc-500 group-hover:text-zinc-400'
                   : 'text-zinc-500 group-hover:text-zinc-600'

@@ -426,6 +426,10 @@ export function VideoPlayer({
         ) as HTMLIFrameElement | null;
         if (iframe && iframe.contentWindow) {
           iframe.contentWindow.postMessage(
+            JSON.stringify({ event: 'listening' }),
+            '*'
+          );
+          iframe.contentWindow.postMessage(
             JSON.stringify({ event: 'command', func, args }),
             '*'
           );
@@ -436,6 +440,19 @@ export function VideoPlayer({
     },
     [video]
   );
+
+  const [prevVideoId, setPrevVideoId] = useState<string | null>(null);
+
+  // Synchronously reset player state when active video changes
+  if (video?.videoId && video.videoId !== prevVideoId) {
+    setPrevVideoId(video.videoId);
+    setIsPlayingLive(true);
+    setCurrentPlaybackTime(watchProgress?.currentTime || 0);
+    setTotalVideoDuration(
+      video.duration ? parseDurationToSeconds(video.duration) : 0
+    );
+    setDismissedResumeVideoId(null);
+  }
 
   const handleSetPlaybackRate = useCallback(
     (rate: number) => {
@@ -450,17 +467,19 @@ export function VideoPlayer({
     [sendIframeCommand]
   );
 
-  // Automatically persist and re-apply preferred playback speed on video change / iframe load
+  // Automatically start playback and re-apply preferred playback speed on video change
   useEffect(() => {
     if (!video?.videoId) return;
 
-    const applySpeed = () => {
+    const startPlaybackAndSpeed = () => {
+      sendIframeCommand('listening', []);
       sendIframeCommand('setPlaybackRate', [playbackRate]);
+      sendIframeCommand('playVideo', []);
     };
 
-    applySpeed();
-    const t1 = setTimeout(applySpeed, 400);
-    const t2 = setTimeout(applySpeed, 1000);
+    startPlaybackAndSpeed();
+    const t1 = setTimeout(startPlaybackAndSpeed, 300);
+    const t2 = setTimeout(startPlaybackAndSpeed, 800);
 
     return () => {
       clearTimeout(t1);
@@ -481,8 +500,10 @@ export function VideoPlayer({
   const handleTogglePlayPause = useCallback(() => {
     if (isPlayingLive) {
       sendIframeCommand('pauseVideo', []);
+      setIsPlayingLive(false);
     } else {
       sendIframeCommand('playVideo', []);
+      setIsPlayingLive(true);
     }
   }, [isPlayingLive, sendIframeCommand]);
 
@@ -504,9 +525,11 @@ export function VideoPlayer({
   const handleOverlayClick = useCallback(() => {
     if (isPlayingLive) {
       sendIframeCommand('pauseVideo', []);
+      setIsPlayingLive(false);
       setOverlayFeedback('pause');
     } else {
       sendIframeCommand('playVideo', []);
+      setIsPlayingLive(true);
       setOverlayFeedback('play');
     }
     if (typeof window !== 'undefined') {
@@ -907,7 +930,7 @@ export function VideoPlayer({
     );
   }
 
-  const embedUrl = `https://www.youtube.com/embed/${video.videoId}?enablejsapi=1&controls=0&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&fs=0`;
+  const embedUrl = `https://www.youtube.com/embed/${video.videoId}?enablejsapi=1&autoplay=1&controls=0&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&fs=0`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -967,6 +990,12 @@ export function VideoPlayer({
           key={video.videoId}
           src={embedUrl}
           title={video.title}
+          onLoad={() => {
+            sendIframeCommand('listening', []);
+            sendIframeCommand('setPlaybackRate', [playbackRate]);
+            sendIframeCommand('playVideo', []);
+            setIsPlayingLive(true);
+          }}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
           className="absolute inset-0 w-full h-full border-0 block pointer-events-none"

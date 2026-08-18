@@ -15,6 +15,12 @@ import {
   Code2,
   Plus,
   Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  RotateCcw,
+  RotateCw,
+  Keyboard,
   Flame,
   CheckSquare,
   Clock,
@@ -403,6 +409,7 @@ export function VideoPlayer({
     return 1;
   });
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [overlayFeedback, setOverlayFeedback] = useState<'play' | 'pause' | null>(null);
   const [newTagInput, setNewTagInput] = useState<string>('');
   const [showTagInput, setShowTagInput] = useState<boolean>(false);
   const [isChaptersExpanded, setIsChaptersExpanded] = useState(false);
@@ -493,6 +500,29 @@ export function VideoPlayer({
       container.requestFullscreen().catch(() => {});
     }
   }, [video]);
+
+  const handleOverlayClick = useCallback(() => {
+    if (isPlayingLive) {
+      sendIframeCommand('pauseVideo', []);
+      setOverlayFeedback('pause');
+    } else {
+      sendIframeCommand('playVideo', []);
+      setOverlayFeedback('play');
+    }
+    if (typeof window !== 'undefined') {
+      window.focus();
+    }
+    setTimeout(() => {
+      setOverlayFeedback(null);
+    }, 600);
+  }, [isPlayingLive, sendIframeCommand]);
+
+  const handleOverlayDoubleClick = useCallback(() => {
+    handleToggleFullscreen();
+    if (typeof window !== 'undefined') {
+      window.focus();
+    }
+  }, [handleToggleFullscreen]);
 
   // Extract video chapters from description and notes
   const chapters = useMemo(() => {
@@ -877,7 +907,7 @@ export function VideoPlayer({
     );
   }
 
-  const embedUrl = `https://www.youtube.com/embed/${video.videoId}?enablejsapi=1&rel=0&modestbranding=1`;
+  const embedUrl = `https://www.youtube.com/embed/${video.videoId}?enablejsapi=1&controls=0&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&fs=0`;
 
   return (
     <div className="flex flex-col gap-5">
@@ -926,7 +956,7 @@ export function VideoPlayer({
       {/* Embedded YouTube Player Container */}
       <div
         id={`yt-player-container-${video.videoId}`}
-        className={`relative w-full rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 ${
+        className={`relative w-full rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 group ${
           isDark
             ? 'shadow-indigo-500/10 border border-zinc-800 bg-black'
             : 'shadow-zinc-300/40 border border-zinc-200 bg-black'
@@ -939,117 +969,102 @@ export function VideoPlayer({
           title={video.title}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
           allowFullScreen
-          className="absolute inset-0 w-full h-full border-0 block"
+          className="absolute inset-0 w-full h-full border-0 block pointer-events-none"
         />
+
+        {/* Click Overlay to prevent YouTube focus hijacking and enable native app hotkeys */}
+        <div
+          onClick={handleOverlayClick}
+          onDoubleClick={handleOverlayDoubleClick}
+          className="absolute inset-0 z-10 cursor-pointer flex items-center justify-center bg-black/0 hover:bg-black/10 transition-colors"
+          title="Click to Play/Pause, Double Click for Fullscreen (Shortcuts active)"
+        >
+          {/* Animated Play/Pause Feedback Badge */}
+          {overlayFeedback && (
+            <div className="p-4 rounded-full bg-black/70 backdrop-blur-md text-white shadow-2xl border border-white/20 animate-pulse">
+              {overlayFeedback === 'play' ? (
+                <Play className="w-10 h-10 fill-white" />
+              ) : (
+                <Pause className="w-10 h-10 fill-white" />
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Video Watch Progress Tracker Bar */}
+      {/* Custom Player Control Console */}
       <div
-        className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col gap-2.5 transition-colors ${
+        className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col gap-3 transition-colors ${
           isDark
             ? 'bg-[#0c0c0e] border-zinc-800'
             : 'bg-white border-zinc-200 shadow-xs'
         }`}
       >
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <div
-              className={`w-2 h-2 rounded-full ${
-                isPlayingLive
-                  ? 'bg-emerald-500 animate-pulse'
-                  : currentPercent > 0
-                  ? 'bg-indigo-500'
-                  : 'bg-zinc-600'
-              }`}
+        {/* Interactive Timeline Range Scrubber */}
+        <div className="space-y-1">
+          <div className="relative flex items-center group">
+            <input
+              type="range"
+              min={0}
+              max={displayDuration || 100}
+              value={displayCurrentTime}
+              onChange={(e) => handleSeekToTime(Number(e.target.value))}
+              className="w-full h-2 rounded-lg bg-zinc-800 accent-indigo-500 hover:accent-indigo-400 cursor-pointer transition-all"
+              title="Click or drag to scrub timeline"
             />
-            <span
-              className={`font-semibold ${
-                isDark ? 'text-zinc-300' : 'text-zinc-700'
-              }`}
+          </div>
+
+          <div className="flex items-center justify-between text-xs font-mono text-zinc-400 px-0.5">
+            <span className="text-indigo-400 font-bold">{formatTime(displayCurrentTime)}</span>
+            <span>{displayDuration > 0 ? formatTime(displayDuration) : '--:--'}</span>
+          </div>
+        </div>
+
+        {/* Control Buttons Bar */}
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-zinc-800/40">
+          {/* Left Controls: Play/Pause, Seek -10s/+10s, Mute */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleTogglePlayPause}
+              className="p-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-md shadow-indigo-600/30 cursor-pointer"
+              title={isPlayingLive ? 'Pause (Space or K)' : 'Play (Space or K)'}
             >
-              Watch Progress
-            </span>
-            <span className="font-mono text-xs font-bold text-indigo-400">
-              {currentPercent}%
-            </span>
+              {isPlayingLive ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white" />}
+            </button>
+
+            <button
+              onClick={() => handleSeekToTime(Math.max(0, currentPlaybackTime - 10))}
+              className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+                isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
+              }`}
+              title="Seek -10s (J or Left Arrow)"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => handleSeekToTime(currentPlaybackTime + 10)}
+              className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+                isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
+              }`}
+              title="Seek +10s (L or Right Arrow)"
+            >
+              <RotateCw className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={handleToggleMute}
+              className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+                isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
+              }`}
+              title={isMuted ? 'Unmute (M)' : 'Mute (M)'}
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
           </div>
 
-          <div className="flex items-center gap-3 font-mono text-xs text-zinc-500">
-            <span>
-              {formatTime(displayCurrentTime)} /{' '}
-              {displayDuration > 0
-                ? formatTime(displayDuration)
-                : video.duration
-                ? formatTime(parseDurationToSeconds(video.duration))
-                : '--:--'}
-            </span>
-          </div>
-        </div>
-
-        {/* Dynamic Progress Bar */}
-        <div
-          className={`w-full h-2 rounded-full overflow-hidden relative ${
-            isDark ? 'bg-zinc-800' : 'bg-zinc-200'
-          }`}
-        >
-          <div
-            className={`h-full transition-all duration-300 rounded-full ${
-              currentPercent >= 100
-                ? 'bg-emerald-500'
-                : 'bg-gradient-to-r from-indigo-500 to-indigo-400'
-            }`}
-            style={{ width: `${currentPercent}%` }}
-          />
-        </div>
-
-        {/* Quick percentage seek & Playback Speed shortcuts buttons */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-[11px] text-zinc-500 pt-1 border-t border-zinc-800/40">
-          {displayDuration > 0 ? (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[10px] uppercase font-bold tracking-wider shrink-0">Seek:</span>
-              <div className="flex items-center gap-1 font-mono">
-                <button
-                  onClick={() => handleSeekToTime(0)}
-                  className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
-                  }`}
-                >
-                  Start
-                </button>
-                <button
-                  onClick={() => handleSeekToTime(Math.round(displayDuration * 0.25))}
-                  className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
-                  }`}
-                >
-                  25%
-                </button>
-                <button
-                  onClick={() => handleSeekToTime(Math.round(displayDuration * 0.5))}
-                  className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
-                  }`}
-                >
-                  50%
-                </button>
-                <button
-                  onClick={() => handleSeekToTime(Math.round(displayDuration * 0.75))}
-                  className={`px-2 py-0.5 rounded border transition-colors cursor-pointer ${
-                    isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
-                  }`}
-                >
-                  75%
-                </button>
-              </div>
-            </div>
-          ) : <div />}
-
-          {/* Speed Preset Shortcuts Bar */}
+          {/* Right Controls: Speed Presets, Theater, Fullscreen */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] uppercase font-bold tracking-wider shrink-0 flex items-center gap-1">
-              <span>Speed:</span>
-              <span className="text-zinc-600 hidden md:inline font-mono">([ ])</span>
-            </span>
             <div className="flex items-center gap-1 font-mono">
               {SPEED_PRESETS.map((preset) => {
                 const isCurrent = playbackRate === preset;
@@ -1057,20 +1072,44 @@ export function VideoPlayer({
                   <button
                     key={preset}
                     onClick={() => handleSetPlaybackRate(preset)}
-                    className={`px-2 py-0.5 rounded border text-[11px] font-semibold transition-all cursor-pointer ${
+                    className={`px-2 py-1 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                       isCurrent
                         ? 'bg-indigo-600 border-indigo-500 text-white shadow-xs'
                         : isDark
                         ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200'
                         : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700 hover:text-zinc-950'
                     }`}
-                    title={`Set playback speed to ${preset}x (Hotkeys: [ or ])`}
+                    title={`Speed ${preset}x ([ or ])`}
                   >
                     {preset}x
                   </button>
                 );
               })}
             </div>
+
+            <button
+              onClick={() => setTheaterMode(!theaterMode)}
+              className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+                theaterMode
+                  ? 'bg-indigo-600 border-indigo-500 text-white'
+                  : isDark
+                  ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400'
+                  : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
+              }`}
+              title="Toggle Theater Mode"
+            >
+              <Tv className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={handleToggleFullscreen}
+              className={`p-2 rounded-xl border text-xs transition-colors cursor-pointer ${
+                isDark ? 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-300' : 'bg-zinc-100 border-zinc-200 hover:bg-zinc-200 text-zinc-700'
+              }`}
+              title="Toggle Fullscreen (F)"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </div>

@@ -99,6 +99,9 @@ function getThemeSnapshot(): 'dark' | 'light' {
       const saved = localStorage.getItem(THEME_STORAGE_KEY) as 'dark' | 'light' | null;
       if (saved === 'light' || saved === 'dark') {
         memoryTheme = saved;
+      } else {
+        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        memoryTheme = systemPrefersDark ? 'dark' : 'light';
       }
     } catch {
       // ignore
@@ -138,6 +141,69 @@ export default function StudyDeckPage() {
     }
     notifyThemeListeners();
   }, []);
+
+  // Listen to OS/System color scheme changes (Windows / Android / iOS / macOS settings)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      const newTheme = e.matches ? 'dark' : 'light';
+      memoryTheme = newTheme;
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      } catch {
+        // ignore
+      }
+      notifyThemeListeners();
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemThemeChange);
+    } else {
+      mediaQuery.addListener(handleSystemThemeChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleSystemThemeChange);
+      } else {
+        mediaQuery.removeListener(handleSystemThemeChange);
+      }
+    };
+  }, []);
+
+  // Update HTML class, CSS color-scheme, and dynamic PWA title bar meta theme-color
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const root = document.documentElement;
+    const themeColor = theme === 'dark' ? '#09090b' : '#ffffff';
+
+    if (theme === 'dark') {
+      root.classList.add('dark');
+      root.classList.remove('light');
+      root.style.colorScheme = 'dark';
+    } else {
+      root.classList.add('light');
+      root.classList.remove('dark');
+      root.style.colorScheme = 'light';
+    }
+
+    // Update or insert meta[name="theme-color"] for installed PWA window title bar
+    let metaTags = document.querySelectorAll('meta[name="theme-color"]');
+    if (metaTags.length === 0) {
+      const meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      meta.content = themeColor;
+      document.head.appendChild(meta);
+    } else {
+      metaTags.forEach((tag) => {
+        tag.setAttribute('content', themeColor);
+      });
+    }
+  }, [theme]);
 
   // Synchronized study store for SSR and client persistence
   const studyData = useSyncExternalStore(

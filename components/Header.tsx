@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Layers, BarChart3, Sun, Moon, LayoutDashboard, Sparkles, BookOpen, Timer, Target } from 'lucide-react';
 import { PlaylistCourse } from '@/types/playlist';
+import { AppLogo } from '@/components/Logo';
 
 interface HeaderProps {
   currentCourse: PlaylistCourse | null;
@@ -67,7 +68,7 @@ export function Header({
       <div className="flex items-center gap-3 sm:gap-4">
         <div
           onClick={onGoToDashboard}
-          className="flex flex-col cursor-pointer group select-none transition-transform active:scale-[0.99]"
+          className="flex items-center gap-3 cursor-pointer group select-none transition-transform active:scale-[0.99]"
           title="Click to go to Main Dashboard"
           role="button"
           tabIndex={0}
@@ -78,31 +79,34 @@ export function Header({
             }
           }}
         >
-          <div className="flex items-center gap-2">
-            <h1
-              className={`text-lg sm:text-xl font-bold tracking-tight transition-colors flex items-center gap-1.5 ${
+          <AppLogo size={34} className="w-8 h-8 group-hover:scale-105 transition-transform" />
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <h1
+                className={`text-lg sm:text-xl font-bold tracking-tight transition-colors flex items-center gap-1.5 ${
+                  isDark
+                    ? 'text-white group-hover:text-indigo-400'
+                    : 'text-zinc-900 group-hover:text-indigo-600'
+                }`}
+              >
+                <span>Rafsan&apos;s Study Deck</span>
+              </h1>
+              {isDashboard && (
+                <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-medium">
+                  Dashboard
+                </span>
+              )}
+            </div>
+            <p
+              className={`text-xs font-medium hidden sm:block transition-colors ${
                 isDark
-                  ? 'text-white group-hover:text-indigo-400'
-                  : 'text-zinc-900 group-hover:text-indigo-600'
+                  ? 'text-zinc-500 group-hover:text-zinc-400'
+                  : 'text-zinc-500 group-hover:text-zinc-600'
               }`}
             >
-              <span>Rafsan&apos;s Study Deck</span>
-            </h1>
-            {isDashboard && (
-              <span className="hidden sm:inline-block text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-medium">
-                Dashboard
-              </span>
-            )}
+              Welcome back, Rafsan! Ready to crush some code today?
+            </p>
           </div>
-          <p
-            className={`text-xs font-medium hidden sm:block transition-colors ${
-              isDark
-                ? 'text-zinc-500 group-hover:text-zinc-400'
-                : 'text-zinc-500 group-hover:text-zinc-600'
-            }`}
-          >
-            Welcome back, Rafsan! Ready to crush some code today?
-          </p>
         </div>
       </div>
 

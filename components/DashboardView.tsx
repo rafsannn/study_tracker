@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { AppLogo } from '@/components/Logo';
 import {
   Play,
   CheckCircle2,
@@ -118,9 +119,12 @@ export function DashboardView({
       >
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono font-medium">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Rafsan&apos;s Command Center</span>
+            <div className="flex items-center gap-3">
+              <AppLogo size={42} className="w-10 h-10 shrink-0" />
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-mono font-medium">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Rafsan&apos;s Command Center</span>
+              </div>
             </div>
             <h2
               className={`text-2xl sm:text-3xl font-extrabold tracking-tight ${

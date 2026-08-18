@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AppLogo } from '@/components/Logo';
 import {
   X,
   Flame,
@@ -142,21 +143,24 @@ export function StatsModal({
         </button>
 
         {/* Header */}
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-mono font-medium">
-            <Award className="w-3.5 h-3.5" />
-            <span>Rafsan&apos;s Engineering Profile</span>
+        <div className="flex items-center gap-3">
+          <AppLogo size={42} className="w-10 h-10 shrink-0" />
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-mono font-medium">
+              <Award className="w-3.5 h-3.5" />
+              <span>Rafsan&apos;s Engineering Profile</span>
+            </div>
+            <h2
+              className={`text-xl font-bold tracking-tight ${
+                isDark ? 'text-white' : 'text-zinc-900'
+              }`}
+            >
+              Study Statistics &amp; Backup
+            </h2>
+            <p className="text-xs text-zinc-500">
+              Real-time track progress, watch time analytics, and local data persistence.
+            </p>
           </div>
-          <h2
-            className={`text-xl font-bold tracking-tight ${
-              isDark ? 'text-white' : 'text-zinc-900'
-            }`}
-          >
-            Study Statistics &amp; Backup
-          </h2>
-          <p className="text-xs text-zinc-500">
-            Real-time track progress, watch time analytics, and local data persistence.
-          </p>
         </div>
 
         {/* Status Notification */}

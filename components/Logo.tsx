@@ -13,7 +13,7 @@ export function AppLogo({ className = 'w-9 h-9', size = 40, showText = false }: 
     <svg
       width={size}
       height={size}
-      viewBox="4 8 268 268"
+      viewBox="-6 -7 284 284"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={`shrink-0 ${className}`}

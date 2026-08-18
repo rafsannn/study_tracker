@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   CheckCircle2,
   Circle,
@@ -393,7 +393,6 @@ export function VideoPlayer({
   const [currentPlaybackTime, setCurrentPlaybackTime] = useState<number>(0);
   const [totalVideoDuration, setTotalVideoDuration] = useState<number>(0);
   const [isPlayingLive, setIsPlayingLive] = useState(false);
-  const [dismissedResumeVideoId, setDismissedResumeVideoId] = useState<string | null>(null);
   const [playbackRate, setPlaybackRate] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -442,16 +441,19 @@ export function VideoPlayer({
   );
 
   const [prevVideoId, setPrevVideoId] = useState<string | null>(null);
+  const [startSecondsMap, setStartSecondsMap] = useState<Record<string, number>>({});
+  const initialSeekDoneRef = useRef<boolean>(false);
 
-  // Synchronously reset player state when active video changes
+  // Synchronously reset UI state on video change and capture initial start time
   if (video?.videoId && video.videoId !== prevVideoId) {
     setPrevVideoId(video.videoId);
+    const saved = Math.floor(watchProgress?.currentTime || 0);
+    setStartSecondsMap((prev) => ({ ...prev, [video.videoId]: saved }));
     setIsPlayingLive(true);
-    setCurrentPlaybackTime(watchProgress?.currentTime || 0);
+    setCurrentPlaybackTime(saved);
     setTotalVideoDuration(
       video.duration ? parseDurationToSeconds(video.duration) : 0
     );
-    setDismissedResumeVideoId(null);
   }
 
   const handleSetPlaybackRate = useCallback(
@@ -467,25 +469,28 @@ export function VideoPlayer({
     [sendIframeCommand]
   );
 
-  // Automatically start playback and re-apply preferred playback speed on video change
+  // Automatically start playback at saved timestamp once per video mount or speed change
   useEffect(() => {
     if (!video?.videoId) return;
+
+    const targetStart = startSecondsMap[video.videoId] ?? 0;
 
     const startPlaybackAndSpeed = () => {
       sendIframeCommand('listening', []);
       sendIframeCommand('setPlaybackRate', [playbackRate]);
+      if (targetStart > 2 && !initialSeekDoneRef.current) {
+        sendIframeCommand('seekTo', [targetStart, true]);
+      }
       sendIframeCommand('playVideo', []);
     };
 
     startPlaybackAndSpeed();
-    const t1 = setTimeout(startPlaybackAndSpeed, 300);
-    const t2 = setTimeout(startPlaybackAndSpeed, 800);
+    const t1 = setTimeout(startPlaybackAndSpeed, 400);
 
     return () => {
       clearTimeout(t1);
-      clearTimeout(t2);
     };
-  }, [video?.videoId, playbackRate, sendIframeCommand]);
+  }, [video?.videoId, playbackRate, sendIframeCommand, startSecondsMap]);
 
   const handleToggleMute = useCallback(() => {
     if (isMuted) {
@@ -574,14 +579,6 @@ export function VideoPlayer({
     onSaveNote(video.videoId, updatedNote);
   };
 
-  // Determine if resume prompt should be shown
-  const shouldShowResume =
-    Boolean(watchProgress &&
-    watchProgress.currentTime > 5 &&
-    watchProgress.percent < 95 &&
-    dismissedResumeVideoId !== video?.videoId &&
-    !isPlayingLive);
-
   // Listen to safe postMessage info from YouTube iframe
   useEffect(() => {
     const handleWindowMessage = (e: MessageEvent) => {
@@ -600,6 +597,16 @@ export function VideoPlayer({
           const { currentTime, duration, playerState } = data.info;
 
           if (typeof currentTime === 'number') {
+            // Guard against wiping saved progress during player initialization at 0s
+            const targetStart = startSecondsMap[video?.videoId || ''] ?? 0;
+            if (targetStart > 2 && !initialSeekDoneRef.current) {
+              if (currentTime < 1) {
+                // Player still booting at 0s, keep saved timestamp in store
+                return;
+              }
+              initialSeekDoneRef.current = true;
+            }
+
             setCurrentPlaybackTime(currentTime);
             const effDuration =
               typeof duration === 'number' && duration > 0
@@ -642,7 +649,7 @@ export function VideoPlayer({
 
     window.addEventListener('message', handleWindowMessage);
     return () => window.removeEventListener('message', handleWindowMessage);
-  }, [video, onUpdateProgress, isCompleted, onToggleComplete, totalVideoDuration]);
+  }, [video, onUpdateProgress, isCompleted, onToggleComplete, totalVideoDuration, startSecondsMap]);
 
   // Periodic ping to initialize postMessage stream once iframe loads
   useEffect(() => {
@@ -672,9 +679,6 @@ export function VideoPlayer({
       setCurrentPlaybackTime(seconds);
       sendIframeCommand('seekTo', [seconds, true]);
       sendIframeCommand('playVideo', []);
-      if (video?.videoId) {
-        setDismissedResumeVideoId(video.videoId);
-      }
 
       const effDuration = totalVideoDuration > 0 ? totalVideoDuration : watchProgress?.duration || 0;
       if (video?.videoId && onUpdateProgress && effDuration > 0) {
@@ -930,52 +934,12 @@ export function VideoPlayer({
     );
   }
 
-  const embedUrl = `https://www.youtube.com/embed/${video.videoId}?enablejsapi=1&autoplay=1&controls=0&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&fs=0`;
+  const startSec = video?.videoId ? (startSecondsMap[video.videoId] ?? 0) : 0;
+  const startParam = startSec > 2 ? `&start=${startSec}` : '';
+  const embedUrl = `https://www.youtube.com/embed/${video.videoId}?enablejsapi=1&autoplay=1&controls=0&rel=0&modestbranding=1&disablekb=1&iv_load_policy=3&fs=0${startParam}`;
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Resume playback prompt banner */}
-      {shouldShowResume && watchProgress && watchProgress.currentTime > 5 && (
-        <div
-          className={`flex items-center justify-between gap-3 p-3 sm:p-3.5 rounded-2xl border animate-fade-in ${
-            isDark
-              ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-200'
-              : 'bg-indigo-50 border-indigo-200 text-indigo-900'
-          }`}
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Clock className="w-4 h-4 text-indigo-400 shrink-0" />
-            <span className="text-xs truncate">
-              Resume where you left off at{' '}
-              <strong className="font-mono font-bold">
-                {formatTime(watchProgress.currentTime)}
-              </strong>{' '}
-              ({watchProgress.percent}% Watched)?
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => handleSeekToTime(watchProgress.currentTime)}
-              className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer inline-flex items-center gap-1"
-            >
-              <Play className="w-3 h-3 fill-white" />
-              <span>Resume</span>
-            </button>
-            <button
-              onClick={() => {
-                if (video?.videoId) setDismissedResumeVideoId(video.videoId);
-              }}
-              className={`px-2 py-1.5 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
-                isDark ? 'text-zinc-400 hover:text-zinc-200' : 'text-zinc-600 hover:text-zinc-900'
-              }`}
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Embedded YouTube Player Container */}
       <div
         id={`yt-player-container-${video.videoId}`}
@@ -993,6 +957,9 @@ export function VideoPlayer({
           onLoad={() => {
             sendIframeCommand('listening', []);
             sendIframeCommand('setPlaybackRate', [playbackRate]);
+            if (startSec > 2) {
+              sendIframeCommand('seekTo', [startSec, true]);
+            }
             sendIframeCommand('playVideo', []);
             setIsPlayingLive(true);
           }}

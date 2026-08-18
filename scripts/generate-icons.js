@@ -1,4 +1,11 @@
-<svg width="512" height="512" viewBox="-6 -7 284 284" fill="none" xmlns="http://www.w3.org/2000/svg">
+const fs = require('fs');
+const path = require('path');
+const sharp = require('sharp');
+
+// Exact optical and geometric center of the cards & artwork is (136, 135)
+// Total artwork bounds: X ~ [5, 267] (width ~262), Y ~ [12, 258] (height ~246)
+// Using a balanced square viewBox [-6, -7, 284, 284] centers the artwork with equal margins on all sides.
+const svgContent = `<svg width="512" height="512" viewBox="-6 -7 284 284" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="backCardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#312e81" />
@@ -71,4 +78,49 @@
       <path d="M 42 14 L 56 25 L 42 36" />
     </g>
   </g>
-</svg>
+</svg>`;
+
+async function generate() {
+  const publicDir = path.join(__dirname, '..', 'public');
+  
+  // 1. Write public/logo.svg
+  fs.writeFileSync(path.join(publicDir, 'logo.svg'), svgContent.trim());
+  console.log('Wrote public/logo.svg');
+
+  const svgBuffer = Buffer.from(svgContent);
+
+  // 2. Generate 512x512 PNG
+  await sharp(svgBuffer)
+    .resize(512, 512)
+    .png()
+    .toFile(path.join(publicDir, 'icon-512.png'));
+  console.log('Wrote public/icon-512.png');
+
+  // 3. Generate 192x192 PNG
+  await sharp(svgBuffer)
+    .resize(192, 192)
+    .png()
+    .toFile(path.join(publicDir, 'icon-192.png'));
+  console.log('Wrote public/icon-192.png');
+
+  // 4. Generate 180x180 Apple Touch Icon
+  await sharp(svgBuffer)
+    .resize(180, 180)
+    .png()
+    .toFile(path.join(publicDir, 'apple-touch-icon.png'));
+  console.log('Wrote public/apple-touch-icon.png');
+
+  // 5. Generate 32x32 Favicon PNG
+  await sharp(svgBuffer)
+    .resize(32, 32)
+    .png()
+    .toFile(path.join(publicDir, 'favicon.png'));
+  console.log('Wrote public/favicon.png');
+
+  console.log('All icons generated successfully!');
+}
+
+generate().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

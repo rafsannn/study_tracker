@@ -481,6 +481,20 @@ export function DashboardView({
                 watchProgressMap
               );
 
+              const getTargetVideoForCourse = () => {
+                if (course.id === studyData.activePlaylistId && studyData.activeVideoId) {
+                  return studyData.activeVideoId;
+                }
+                const completed = new Set(studyData.completedVideos[course.id] || []);
+                const inProg = course.items.find(
+                  (it) => !completed.has(it.videoId) && (watchProgressMap[it.videoId]?.currentTime || 0) > 0
+                );
+                if (inProg) return inProg.videoId;
+                const uncompleted = course.items.find((it) => !completed.has(it.videoId));
+                if (uncompleted) return uncompleted.videoId;
+                return course.items[0]?.videoId;
+              };
+
               return (
                 <div
                   key={course.id}
@@ -496,7 +510,7 @@ export function DashboardView({
                 >
                   {/* Card Thumbnail Top */}
                   <div
-                    onClick={() => onSelectCourse(course)}
+                    onClick={() => onSelectCourse(course, getTargetVideoForCourse())}
                     className="relative w-full h-44 bg-zinc-900 overflow-hidden cursor-pointer shrink-0"
                   >
                     <Image
@@ -537,7 +551,7 @@ export function DashboardView({
                   <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
                     <div className="space-y-1.5">
                       <h4
-                        onClick={() => onSelectCourse(course)}
+                        onClick={() => onSelectCourse(course, getTargetVideoForCourse())}
                         className={`text-sm font-bold tracking-tight line-clamp-2 cursor-pointer transition-colors ${
                           isDark
                             ? 'text-zinc-100 group-hover:text-indigo-300'

@@ -11,6 +11,7 @@ import { StatsModal } from '@/components/StatsModal';
 import { DashboardView } from '@/components/DashboardView';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 import { TargetEstimatorModal } from '@/components/TargetEstimatorModal';
+import { ShortcutsModal } from '@/components/ShortcutsModal';
 import { PlaylistCourse, PlaylistItem, StudyGoal, UserStudyData, VideoWatchProgress } from '@/types/playlist';
 import { parseDurationToSeconds } from '@/lib/utils';
 
@@ -120,6 +121,40 @@ export default function StudyDeckPage() {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isPomodoroOpen, setIsPomodoroOpen] = useState(false);
   const [isTargetEstimatorOpen, setIsTargetEstimatorOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
+  // Global Keyboard Shortcuts (Shortcuts Modal ?, Pomodoro Alt+P, Stats S)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Open Shortcuts Guide (?)
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
+      }
+      // Open Pomodoro (Alt + P)
+      else if (e.altKey && (e.key === 'p' || e.key === 'P')) {
+        e.preventDefault();
+        setIsPomodoroOpen((prev) => !prev);
+      }
+      // Open Stats (S)
+      else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        setIsStatsModalOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   // Synchronized theme store
   const theme = useSyncExternalStore(
@@ -716,6 +751,7 @@ export default function StudyDeckPage() {
         onOpenStatsModal={() => setIsStatsModalOpen(true)}
         onOpenPomodoro={() => setIsPomodoroOpen(true)}
         onOpenTargetEstimator={() => setIsTargetEstimatorOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onGoToDashboard={() => setView('dashboard')}
         isDashboard={view === 'dashboard'}
         streakCount={studyData.streak?.count || 0}
@@ -857,6 +893,12 @@ export default function StudyDeckPage() {
         activeCourse={currentCourse}
         studyData={studyData}
         onUpdateGoal={handleUpdateStudyGoal}
+        theme={theme}
+      />
+
+      <ShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
         theme={theme}
       />
     </div>

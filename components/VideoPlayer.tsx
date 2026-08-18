@@ -388,7 +388,21 @@ export function VideoPlayer({
   const [totalVideoDuration, setTotalVideoDuration] = useState<number>(0);
   const [isPlayingLive, setIsPlayingLive] = useState(false);
   const [dismissedResumeVideoId, setDismissedResumeVideoId] = useState<string | null>(null);
-  const [playbackRate, setPlaybackRate] = useState<number>(1);
+  const [playbackRate, setPlaybackRate] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('rafsan_study_deck_playback_speed');
+        if (saved) {
+          const val = parseFloat(saved);
+          if (!isNaN(val) && val > 0) return val;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return 1;
+  });
+  const [isMuted, setIsMuted] = useState<boolean>(false);
   const [newTagInput, setNewTagInput] = useState<string>('');
   const [showTagInput, setShowTagInput] = useState<boolean>(false);
   const [isChaptersExpanded, setIsChaptersExpanded] = useState(false);
@@ -419,10 +433,66 @@ export function VideoPlayer({
   const handleSetPlaybackRate = useCallback(
     (rate: number) => {
       setPlaybackRate(rate);
+      try {
+        localStorage.setItem('rafsan_study_deck_playback_speed', String(rate));
+      } catch {
+        // ignore
+      }
       sendIframeCommand('setPlaybackRate', [rate]);
     },
     [sendIframeCommand]
   );
+
+  // Automatically persist and re-apply preferred playback speed on video change / iframe load
+  useEffect(() => {
+    if (!video?.videoId) return;
+
+    const applySpeed = () => {
+      sendIframeCommand('setPlaybackRate', [playbackRate]);
+    };
+
+    applySpeed();
+    const t1 = setTimeout(applySpeed, 400);
+    const t2 = setTimeout(applySpeed, 1000);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, [video?.videoId, playbackRate, sendIframeCommand]);
+
+  const handleToggleMute = useCallback(() => {
+    if (isMuted) {
+      sendIframeCommand('unMute', []);
+      setIsMuted(false);
+    } else {
+      sendIframeCommand('mute', []);
+      setIsMuted(true);
+    }
+  }, [isMuted, sendIframeCommand]);
+
+  const handleTogglePlayPause = useCallback(() => {
+    if (isPlayingLive) {
+      sendIframeCommand('pauseVideo', []);
+    } else {
+      sendIframeCommand('playVideo', []);
+    }
+  }, [isPlayingLive, sendIframeCommand]);
+
+  const handleToggleFullscreen = useCallback(() => {
+    if (!video?.videoId) return;
+    const container =
+      document.getElementById(`yt-player-container-${video.videoId}`) ||
+      document.getElementById(`yt-player-${video.videoId}`);
+
+    if (!container) return;
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    } else {
+      container.requestFullscreen().catch(() => {});
+    }
+  }, [video]);
 
   // Extract video chapters from description and notes
   const chapters = useMemo(() => {
@@ -544,45 +614,94 @@ export function VideoPlayer({
   }, [video?.videoId]);
 
   // Action: Seek / Resume Playback
-  const handleSeekToTime = (seconds: number) => {
-    setCurrentPlaybackTime(seconds);
-    sendIframeCommand('seekTo', [seconds, true]);
-    sendIframeCommand('playVideo', []);
-    if (video?.videoId) {
-      setDismissedResumeVideoId(video.videoId);
-    }
+  const handleSeekToTime = useCallback(
+    (seconds: number) => {
+      setCurrentPlaybackTime(seconds);
+      sendIframeCommand('seekTo', [seconds, true]);
+      sendIframeCommand('playVideo', []);
+      if (video?.videoId) {
+        setDismissedResumeVideoId(video.videoId);
+      }
 
-    const effDuration = totalVideoDuration > 0 ? totalVideoDuration : watchProgress?.duration || 0;
-    if (video?.videoId && onUpdateProgress && effDuration > 0) {
-      const percent = Math.min(
-        100,
-        Math.max(0, Math.round((seconds / effDuration) * 100))
-      );
-      onUpdateProgress(video.videoId, {
-        currentTime: Math.round(seconds),
-        duration: Math.round(effDuration),
-        percent,
-        lastWatchedAt: new Date().toISOString(),
-      });
-    }
-  };
+      const effDuration = totalVideoDuration > 0 ? totalVideoDuration : watchProgress?.duration || 0;
+      if (video?.videoId && onUpdateProgress && effDuration > 0) {
+        const percent = Math.min(
+          100,
+          Math.max(0, Math.round((seconds / effDuration) * 100))
+        );
+        onUpdateProgress(video.videoId, {
+          currentTime: Math.round(seconds),
+          duration: Math.round(effDuration),
+          percent,
+          lastWatchedAt: new Date().toISOString(),
+        });
+      }
+    },
+    [video, sendIframeCommand, totalVideoDuration, watchProgress?.duration, onUpdateProgress]
+  );
 
-  // Keyboard shortcut listener
+  // Keyboard shortcut listener for player controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
 
-      if (e.key === 'n' || e.key === 'N') {
+      const key = e.key.toLowerCase();
+
+      // Fullscreen (F)
+      if (key === 'f') {
+        e.preventDefault();
+        handleToggleFullscreen();
+      }
+      // Play / Pause (Space or K)
+      else if (e.code === 'Space' || key === 'k') {
+        e.preventDefault();
+        handleTogglePlayPause();
+      }
+      // Seek Backward 10s (J or Left Arrow)
+      else if (key === 'j' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleSeekToTime(Math.max(0, currentPlaybackTime - 10));
+      }
+      // Seek Forward 10s (L or Right Arrow)
+      else if (key === 'l' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleSeekToTime(currentPlaybackTime + 10);
+      }
+      // Mute / Unmute (M)
+      else if (key === 'm') {
+        e.preventDefault();
+        handleToggleMute();
+      }
+      // Next Video (N)
+      else if (key === 'n') {
         e.preventDefault();
         if (hasNext) onNextLesson();
-      } else if (e.key === 'p' || e.key === 'P') {
+      }
+      // Previous Video (P)
+      else if (key === 'p' && !e.altKey) {
         e.preventDefault();
         if (hasPrevious) onPreviousLesson();
-      } else if (e.key === 'c' || e.key === 'C') {
+      }
+      // Toggle Mark Completed (D)
+      else if (key === 'd') {
         e.preventDefault();
-        if (video) onToggleComplete(video.videoId);
-      } else if (e.key === '[' || e.key === '<') {
+        if (video?.videoId) onToggleComplete(video.videoId);
+      }
+      // Focus Notes Scratchpad (T)
+      else if (key === 't') {
+        e.preventDefault();
+        const pad = document.getElementById('video-scratchpad');
+        if (pad) pad.focus();
+      }
+      // Decrease Speed (< or [)
+      else if (e.key === '<' || e.key === ',' || e.key === '[') {
         e.preventDefault();
         const currentIdx = SPEED_PRESETS.indexOf(playbackRate);
         if (currentIdx > 0) {
@@ -590,7 +709,9 @@ export function VideoPlayer({
         } else if (currentIdx === -1) {
           handleSetPlaybackRate(1);
         }
-      } else if (e.key === ']' || e.key === '>') {
+      }
+      // Increase Speed (> or . or ])
+      else if (e.key === '>' || e.key === '.' || e.key === ']') {
         e.preventDefault();
         const currentIdx = SPEED_PRESETS.indexOf(playbackRate);
         if (currentIdx !== -1 && currentIdx < SPEED_PRESETS.length - 1) {
@@ -603,7 +724,21 @@ export function VideoPlayer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasNext, hasPrevious, video, onNextLesson, onPreviousLesson, onToggleComplete, playbackRate, handleSetPlaybackRate]);
+  }, [
+    hasNext,
+    hasPrevious,
+    video,
+    onNextLesson,
+    onPreviousLesson,
+    onToggleComplete,
+    playbackRate,
+    handleSetPlaybackRate,
+    handleToggleFullscreen,
+    handleTogglePlayPause,
+    handleToggleMute,
+    handleSeekToTime,
+    currentPlaybackTime,
+  ]);
 
   const handleCopyLink = async () => {
     if (!video) return;
@@ -790,6 +925,7 @@ export function VideoPlayer({
 
       {/* Embedded YouTube Player Container */}
       <div
+        id={`yt-player-container-${video.videoId}`}
         className={`relative w-full rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 ${
           isDark
             ? 'shadow-indigo-500/10 border border-zinc-800 bg-black'

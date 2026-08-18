@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Layers, BarChart3, Sun, Moon, LayoutDashboard, Sparkles, BookOpen, Timer, Target } from 'lucide-react';
+import { Plus, Layers, BarChart3, Sun, Moon, LayoutDashboard, Sparkles, BookOpen, Timer, Target, Keyboard } from 'lucide-react';
 import { PlaylistCourse } from '@/types/playlist';
 import { AppLogo } from '@/components/Logo';
 
@@ -13,6 +13,7 @@ interface HeaderProps {
   onOpenStatsModal: () => void;
   onOpenPomodoro?: () => void;
   onOpenTargetEstimator?: () => void;
+  onOpenShortcuts?: () => void;
   onGoToDashboard: () => void;
   isDashboard: boolean;
   streakCount: number;
@@ -30,6 +31,7 @@ export function Header({
   onOpenStatsModal,
   onOpenPomodoro,
   onOpenTargetEstimator,
+  onOpenShortcuts,
   onGoToDashboard,
   isDashboard,
   streakCount,
@@ -212,6 +214,23 @@ export function Header({
             >
               <Target className="w-3.5 h-3.5 text-indigo-400" />
               <span className="hidden md:inline">Targets</span>
+            </button>
+          )}
+
+          {/* Keyboard Shortcuts Cheat Sheet Button */}
+          {onOpenShortcuts && (
+            <button
+              id="shortcuts-btn"
+              onClick={onOpenShortcuts}
+              className={`inline-flex items-center justify-center p-2 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
+                isDark
+                  ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-indigo-400 hover:text-indigo-300'
+                  : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-indigo-600 hover:text-indigo-700'
+              }`}
+              title="Keyboard Shortcuts Guide (?)"
+              aria-label="Keyboard Shortcuts"
+            >
+              <Keyboard className="w-4 h-4" />
             </button>
           )}
 

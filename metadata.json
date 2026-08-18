@@ -1,0 +1,6 @@
+{
+  "name": "Rafsan's Study Deck",
+  "description": "Personal YouTube playlist progress tracker and study deck for Rafsan with video bookmarks, streak tracking, and course progress.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

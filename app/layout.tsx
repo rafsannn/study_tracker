@@ -10,22 +10,30 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Rafsan's Study Deck | YouTube Playlist Progress Tracker",
+  title: "Study Deck",
   description: "Personal YouTube Playlist progress tracker and study deck for Rafsan with course checklists, notes, streak tracking, and instant stream navigation.",
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/logo.svg', type: 'image/svg+xml' },
+      { url: '/favicon.png', type: 'image/png', sizes: '32x32' },
+    ],
+    shortcut: '/logo.svg',
+    apple: '/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: "Rafsan's Study Deck",
+    title: "Study Deck",
   },
   openGraph: {
-    title: "Rafsan's Study Deck",
+    title: "Study Deck",
     description: "Personal YouTube Playlist progress tracker and study deck for Rafsan.",
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: "Rafsan's Study Deck",
+    title: "Study Deck",
     description: "Personal YouTube Playlist progress tracker and study deck for Rafsan.",
   },
 };

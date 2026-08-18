@@ -174,6 +174,20 @@ export default function StudyDeckPage() {
     };
   }, []);
 
+  // Register Service Worker for MS Edge, Chrome, Safari PWA installation
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((reg) => {
+          console.log('PWA ServiceWorker registered:', reg.scope);
+        })
+        .catch((err) => {
+          console.warn('ServiceWorker registration error:', err);
+        });
+    }
+  }, []);
+
   // Update HTML class, CSS color-scheme, and dynamic PWA title bar meta theme-color
   useEffect(() => {
     if (typeof document === 'undefined') return;

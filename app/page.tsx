@@ -9,7 +9,6 @@ import { PlaylistSidebar } from '@/components/PlaylistSidebar';
 import { PlaylistModal } from '@/components/PlaylistModal';
 import { StatsModal } from '@/components/StatsModal';
 import { DashboardView } from '@/components/DashboardView';
-import { PomodoroTimer } from '@/components/PomodoroTimer';
 import { TargetEstimatorModal } from '@/components/TargetEstimatorModal';
 import { ShortcutsModal } from '@/components/ShortcutsModal';
 import { PlaylistCourse, PlaylistItem, StudyGoal, UserStudyData, VideoWatchProgress } from '@/types/playlist';
@@ -119,11 +118,10 @@ export default function StudyDeckPage() {
   const [view, setView] = useState<'dashboard' | 'learning'>('dashboard');
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
-  const [isPomodoroOpen, setIsPomodoroOpen] = useState(false);
   const [isTargetEstimatorOpen, setIsTargetEstimatorOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
-  // Global Keyboard Shortcuts (Shortcuts Modal ?, Pomodoro Alt+P, Stats S)
+  // Global Keyboard Shortcuts (Shortcuts Modal ?, Stats S)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -139,11 +137,6 @@ export default function StudyDeckPage() {
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
         e.preventDefault();
         setIsShortcutsOpen((prev) => !prev);
-      }
-      // Open Pomodoro (Alt + P)
-      else if (e.altKey && (e.key === 'p' || e.key === 'P')) {
-        e.preventDefault();
-        setIsPomodoroOpen((prev) => !prev);
       }
       // Open Stats (S)
       else if (e.key === 's' || e.key === 'S') {
@@ -749,7 +742,6 @@ export default function StudyDeckPage() {
         onSelectCourse={handleSelectCourse}
         onOpenImportModal={() => setIsImportModalOpen(true)}
         onOpenStatsModal={() => setIsStatsModalOpen(true)}
-        onOpenPomodoro={() => setIsPomodoroOpen(true)}
         onOpenTargetEstimator={() => setIsTargetEstimatorOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onGoToDashboard={() => setView('dashboard')}
@@ -771,7 +763,6 @@ export default function StudyDeckPage() {
             activeCourse={currentCourse}
             onSelectCourse={handleSelectCourse}
             onOpenImportModal={() => setIsImportModalOpen(true)}
-            onOpenPomodoro={() => setIsPomodoroOpen(true)}
             onOpenTargetEstimator={() => setIsTargetEstimatorOpen(true)}
             onDeleteCourse={handleDeleteCourse}
             onResetCourseProgress={handleResetCourseProgress}
@@ -876,13 +867,6 @@ export default function StudyDeckPage() {
         courses={allCourses}
         onImportBackup={handleImportBackup}
         onResetAllData={handleResetAllData}
-        theme={theme}
-      />
-
-      <PomodoroTimer
-        isOpen={isPomodoroOpen}
-        onClose={() => setIsPomodoroOpen(false)}
-        activeTopicTitle={activeVideo?.title}
         theme={theme}
       />
 

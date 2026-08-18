@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Layers, BarChart3, Sun, Moon, LayoutDashboard, Sparkles, BookOpen, Timer, Target, Keyboard } from 'lucide-react';
+import { Plus, Layers, BarChart3, Sun, Moon, LayoutDashboard, Sparkles, BookOpen, Target, Keyboard } from 'lucide-react';
 import { PlaylistCourse } from '@/types/playlist';
 import { AppLogo } from '@/components/Logo';
 
@@ -11,7 +11,6 @@ interface HeaderProps {
   onSelectCourse: (course: PlaylistCourse) => void;
   onOpenImportModal: () => void;
   onOpenStatsModal: () => void;
-  onOpenPomodoro?: () => void;
   onOpenTargetEstimator?: () => void;
   onOpenShortcuts?: () => void;
   onGoToDashboard: () => void;
@@ -29,7 +28,6 @@ export function Header({
   onSelectCourse,
   onOpenImportModal,
   onOpenStatsModal,
-  onOpenPomodoro,
   onOpenTargetEstimator,
   onOpenShortcuts,
   onGoToDashboard,
@@ -153,24 +151,6 @@ export function Header({
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
             <span className="hidden md:inline">Dashboard</span>
-          </button>
-        )}
-
-        {/* Pomodoro Timer Launcher */}
-        {onOpenPomodoro && (
-          <button
-            id="pomodoro-btn"
-            onClick={onOpenPomodoro}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
-              isDark
-                ? 'bg-zinc-900/80 hover:bg-zinc-800 border-zinc-800 text-rose-400 hover:text-rose-300'
-                : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-rose-600 hover:text-rose-700'
-            }`}
-            title="Open Pomodoro Timer"
-            aria-label="Open Pomodoro Timer"
-          >
-            <Timer className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-            <span className="hidden md:inline">Pomodoro</span>
           </button>
         )}
 

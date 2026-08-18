@@ -30,7 +30,6 @@ const SHORTCUT_GROUPS = [
       { key: 'P', description: 'Return to Previous Video' },
       { key: 'D', description: 'Toggle Completion Checkmark' },
       { key: 'T', description: 'Jump to Video Notes Scratchpad' },
-      { key: 'Alt + P', description: 'Open Pomodoro Focus Timer' },
       { key: 'S', description: 'Open Study Statistics & Backup' },
       { key: '?', description: 'Show / Hide Keyboard Shortcuts' },
     ],

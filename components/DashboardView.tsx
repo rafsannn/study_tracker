@@ -21,7 +21,6 @@ import {
   ExternalLink,
   Code2,
   Hourglass,
-  Timer,
   Target,
 } from 'lucide-react';
 import { PlaylistCourse, UserStudyData } from '@/types/playlist';
@@ -33,7 +32,6 @@ interface DashboardViewProps {
   activeCourse: PlaylistCourse | null;
   onSelectCourse: (course: PlaylistCourse, videoId?: string) => void;
   onOpenImportModal: () => void;
-  onOpenPomodoro?: () => void;
   onOpenTargetEstimator?: () => void;
   onDeleteCourse: (courseId: string) => void;
   onResetCourseProgress: (courseId: string) => void;
@@ -46,7 +44,6 @@ export function DashboardView({
   activeCourse,
   onSelectCourse,
   onOpenImportModal,
-  onOpenPomodoro,
   onOpenTargetEstimator,
   onDeleteCourse,
   onResetCourseProgress,
@@ -151,21 +148,6 @@ export function DashboardView({
               <Plus className="w-4 h-4" />
               <span>Import Playlist</span>
             </button>
-
-            {onOpenPomodoro && (
-              <button
-                onClick={onOpenPomodoro}
-                className={`inline-flex items-center gap-2 px-4 py-3 rounded-2xl border text-xs font-semibold transition-all cursor-pointer ${
-                  isDark
-                    ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-700 text-rose-400 hover:text-rose-300'
-                    : 'bg-white hover:bg-zinc-100 border-zinc-200 text-rose-600 shadow-sm'
-                }`}
-                title="Start Pomodoro Focus Session"
-              >
-                <Timer className="w-4 h-4 text-rose-500" />
-                <span>Pomodoro Timer</span>
-              </button>
-            )}
 
             {onOpenTargetEstimator && (
               <button
@@ -390,7 +372,11 @@ export function DashboardView({
 
             <div className="shrink-0 w-full md:w-auto">
               <button
-                className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectCourse(resumeCourse, resumeVideo.videoId);
+                }}
+                className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
               >
                 Continue Now
               </button>
